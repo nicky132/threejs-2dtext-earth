@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="http://www.yanhuangxueyuan.com/threejs/build/three.min.js"></script>
+    <script src="http://www.yanhuangxueyuan.com/threejs/examples/js/controls/OrbitControls.js"></script>
+    <script src="http://www.yanhuangxueyuan.com/threejs/examples/js/renderers/CSS2DRenderer.js"></script>
+    <script src="http://www.yanhuangxueyuan.com/threejs/examples/js/renderers/CSS3DRenderer.js"></script>
+    <title>Document</title>
+    <style>
+        .label {
+            color: #FFF;
+            padding: 2px;
+            background-color: rgb(20, 143, 211, 0.68);
+            box-shadow: 0 0 12px rgba(0, 128, 255, 0.75);
+            border: 1px solid rgba(127, 177, 255, 0.75);
+        }
+    </style>
+</head>
+<body>
+    <div id="webgl"></div>
+    
+</body>
+</html>
+<script>
+    var scene,camera,renderer,labelRenderer;
+    init();
+    // render(render2d);
+    render(render3d);
+    animate();
+    function init(){
+        scene = new THREE.Scene();
+        camera = new THREE.PerspectiveCamera(90, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(10, 10, 10);
+        scene.add(camera);//添加相机
+        //添加坐标轴
+        var axes = new THREE.AxesHelper(500);//500表示xyz轴的长度，红:x,绿:y,蓝:z
+        scene.add(axes);
+        const box = new THREE.Mesh(new THREE.BoxGeometry(5, 5, 5), new THREE.MeshBasicMaterial({ color: 0x0000ff }));
+        scene.add(box);
+        
+        // box.layers.disableAll();
+        // box.layers.enableAll();
+        console.log(box);
+        create2dLabel(box);//为物体增加标签
+        // const label = create3dLabel(box);//为物体增加标签
+        // label.layers.disableAll();
+    }
+    function create2dLabel(box){
+
+        const div = document.createElement('div');
+        div.className = 'label';
+        div.innerText = 'this is a 2d label';
+        const label = new THREE.CSS2DObject(div);
+        
+        box.add(label);
+        return label;
+    }
+    function create3dLabel(box){
+        const div = document.createElement('div');
+        div.className = 'label';
+        div.innerText = 'this is a 3d label';
+        const label = new THREE.CSS3DObject(div);
+        
+        box.add(label);
+        return label;
+    }
+    function render(callback){
+        
+        callback();
+        renderer = new THREE.WebGLRenderer({
+        antialias: true,
+        alpha: true
+        });//画布
+        renderer.setPixelRatio( window.devicePixelRatio );
+        renderer.setSize(window.innerWidth, window.innerHeight);//设置渲染区域尺寸
+        renderer.setClearColor(0xb9d3ff, 1); //设置背景颜色
+        document.getElementById('webgl').appendChild(renderer.domElement);
+        var controls = new THREE.OrbitControls(camera, renderer.domElement);
+        var controls2 = new THREE.OrbitControls(camera, labelRenderer.domElement);
+    }
+    function render2d(){
+        //渲染标签
+        labelRenderer = new THREE.CSS2DRenderer();
+
+        labelRenderer.setSize( window.innerWidth, window.innerHeight );
+        labelRenderer.domElement.style.position = 'absolute';
+        labelRenderer.domElement.style.top = '0px';
+        document.getElementById('webgl').appendChild( labelRenderer.domElement );
+    }
+    function render3d(){
+        labelRenderer = new THREE.CSS3DRenderer();
+
+        labelRenderer.setSize( window.innerWidth, window.innerHeight );
+        labelRenderer.domElement.style.position = 'absolute';
+        labelRenderer.domElement.style.top = '0px';
+        document.getElementById('webgl').appendChild( labelRenderer.domElement );
+    }
+    function animate() {
+        requestAnimationFrame( animate );
+        renderer.render( scene, camera );
+        labelRenderer.render( scene, camera );
+    }
+</script>

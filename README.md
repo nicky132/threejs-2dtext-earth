@@ -1,2 +1,2 @@
-# threejs-2dtext-earth
-threejs-2dtext-earth
+# three_bloom
+Created with CodeSandbox

@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>demo-sun</title>
+    <style>
+      canvas {
+        width: 100%;
+        height: 100%;
+      }
+    </style>
+    <!-- <script src="./three.min.js"></script> -->
+    <script src="https://cdn.bootcss.com/three.js/92/three.js"></script>
+    <!-- <script src="./stats.js"></script> -->
+    <script src="http://cdn.bootcss.com/stats.js/r16/Stats.js"></script>
+  </head>
+  <body>
+    <script>
+      var renderer, camera, scene, stats, light
+      var width, height
+
+      function initThree() {
+        width = window.innerWidth
+        height = window.innerHeight
+        renderer = new THREE.WebGLRenderer({
+          antialias: true, //开启抗锯齿
+        })
+        renderer.setSize(width, height) //设置画布大小
+        renderer.setClearColor(0x000000) //设置画布背景颜色
+        document.body.appendChild(renderer.domElement) //将画布追加到html文档中
+      }
+
+      function setStats() {
+        stats = new Stats()
+        stats.domElement.style.position = 'absolute'
+        stats.domElement.style.left = '0'
+        stats.domElement.style.top = '0'
+        document.body.appendChild(stats.domElement)
+      }
+
+      function initCamera() {
+        camera = new THREE.PerspectiveCamera(45, width / height, 1, 10000)
+        camera.position.x = 100
+        camera.position.y = 100
+        camera.position.z = 100
+        camera.up.x = 0
+        camera.up.y = 1
+        camera.up.z = 0
+        camera.lookAt(0, 0, 0)
+      }
+
+      function initScene() {
+        scene = new THREE.Scene()
+      }
+
+      function initLight() {
+        light = new THREE.DirectionalLight(0xffffff, 1)
+        light.position.set(10, 10, 3)
+        scene.add(light)
+      }
+
+      var sunMesh //太阳
+      function initSun() {
+        var geometry = new THREE.SphereGeometry(10, 28, 22) //球体半径为10，经度切为28份，纬度切为22份（根据需要自行设置）
+        var material = new THREE.MeshLambertMaterial({ color: 0xff0000 }) //使用Lambert材质，设为红色
+        sunMesh = new THREE.Mesh(geometry, material)
+        sunMesh.position.set(0, 0, 0) //设置球体位置
+        scene.add(sunMesh) //添加到场景中
+      }
+
+      var balls = []
+      function initball() {
+        for (var i = 2; i < 6; i++) {
+          var geometry = new THREE.SphereGeometry(2 + i / 2, 22, 16)
+          var material = new THREE.MeshLambertMaterial({ color: getColor() })
+          ball = new THREE.Mesh(geometry, material)
+          ball.position.set(10 * i, 0, 0)
+          scene.add(ball)
+          balls.push(ball)
+        }
+      }
+
+      function getColor() {
+        //定义字符串变量colorValue存放可以构成十六进制颜色值的值
+        var colorValue = '0,1,2,3,4,5,6,7,8,9,a,b,c,d,e,f'
+        //以","为分隔符，将colorValue字符串分割为字符数组["0","1",...,"f"]
+        var colorArray = colorValue.split(',')
+        var color = '#' //定义一个存放十六进制颜色值的字符串变量，先将#存放进去
+        //使用for循环语句生成剩余的六位十六进制值
+        for (var i = 0; i < 6; i++) {
+          //colorArray[Math.floor(Math.random()*16)]随机取出
+          // 由16个元素组成的colorArray的某一个值，然后将其加在color中，
+          //字符串相加后，得出的仍是字符串
+          color += colorArray[Math.floor(Math.random() * 16)]
+        }
+        return color
+      }
+
+      var circles = []
+      function initCycle() {
+        //用画二维图形的方式画圆
+        for (var i = 2; i < 6; i++) {
+          var radius = 10 * i //设置同心圆，只有半径不一样
+          var geometry = new THREE.CircleGeometry(radius, 10) //半径，分段数
+          var material = new THREE.MeshBasicMaterial({ color: 0xffa500, wireframe: true })
+          var cycleMesh = new THREE.Mesh(geometry, material)
+          cycleMesh.position.set(0, 0, 0)
+          cycleMesh.rotateX(Math.PI / 2) //默认是绘制在xy平面的，所以这里要旋转下放到xz平面
+          scene.add(cycleMesh)
+          circles.push(radius)
+        }
+      }
+
+      function initCycle2() {
+        //用画线方式画圆
+        for (var j = 2; j < 6; j++) {
+          var radius = 10 * j
+          var lineGeometry = new THREE.Geometry()
+          for (var i = 0; i < 2 * Math.PI; i += Math.PI / 30) {
+            lineGeometry.vertices.push(new THREE.Vector3(radius * Math.cos(i), 0, radius * Math.sin(i), 0))
+          }
+          var material = new THREE.LineBasicMaterial({ color: 0xffa500 })
+          var cycleMesh = new THREE.Line(lineGeometry, material)
+          cycleMesh.position.set(0, 0, 0)
+          scene.add(cycleMesh)
+          circles.push(radius)
+        }
+      }
+
+      var deg = Math.PI / 2
+
+      function ballAnim() {
+        deg += ((1 / 6) * Math.PI) / 180 //每次转动1/6度
+        balls.forEach((ball, index) => {
+          var ballDeg = (3 * deg) / (index + 1) //根据索引值设置每个球体转动不同的角度
+          ball.position.x = Math.sin(ballDeg) * circles[index]
+          ball.position.z = Math.cos(ballDeg) * circles[index]
+        })
+      }
+
+      function init() {
+        initThree()
+        setStats()
+        initCamera()
+        initScene()
+        initLight()
+        initSun()
+        initball()
+        // initCycle();
+        initCycle2()
+      }
+
+      function anim() {
+        ballAnim()
+        renderer.render(scene, camera)
+        stats.update()
+        requestAnimationFrame(anim)
+      }
+
+      init()
+      anim()
+    </script>
+  </body>
+</html>
