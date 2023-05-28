@@ -1,5 +1,6 @@
 import React, { useRef, useState, useMemo, useEffect } from 'react'
 import * as THREE from 'three'
+import { MeshLine, MeshLineMaterial, MeshLineRaycast } from 'three.meshline'
 import { GUI } from 'three/examples/jsm/libs/lil-gui.module.min'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js'
@@ -13,7 +14,48 @@ import { tag, labelRenderer } from './3dTag_earth'
 import './app.css'
 
 function App() {
+  var animateDots = []
   var earthBallSize = 15
+  // 轨迹线条颜色
+  var metapLineColor = 'rgb(27, 180, 176)'
+  var vIndex = 0
+  var firstBool = true
+  // 线上滑动的小球
+  var aGroup = new THREE.Group()
+
+  function animationLine() {
+    aGroup.children.forEach(function (elem, index) {
+      var _index = parseInt(index / 50)
+      var index2 = index - 50 * _index
+      var _vIndex = 0
+      if (firstBool) {
+        _vIndex = vIndex - (index2 % 50) >= 0 ? vIndex - (index2 % 50) : 0
+      } else {
+        _vIndex = vIndex - (index2 % 50) >= 0 ? vIndex - (index2 % 50) : 150 + vIndex - index2
+      }
+      var v = animateDots[_index][_vIndex]
+      elem.position.set(v.x, v.y, v.z)
+    })
+    vIndex++
+    if (vIndex > 150) {
+      vIndex = 0
+    }
+    if (vIndex == 150 && firstBool) {
+      firstBool = false
+    }
+    requestAnimationFrame(animationLine)
+  }
+  // 计算v1,v2 的中点
+  function getVCenter(v1, v2) {
+    let v = v1.add(v2)
+    return v.divideScalar(2)
+  }
+
+  // 计算V1，V2向量固定长度的点
+  function getLenVcetor(v1, v2, len) {
+    let v1v2Len = v1.distanceTo(v2)
+    return v1.lerp(v2, len / v1v2Len)
+  }
   // 飞线，先生成起始点和终止点
   // 添加轨迹函数
   var addLine = function (v0, v3) {
@@ -26,7 +68,7 @@ function App() {
     // 顶点坐标
     // debugger
     // var vtop = rayLine.at(hLen / rayLine.at(1).distanceTo(p0))
-    // ray的at方法现在必须要两个参数才能执行，所以需要加入临时变量temp
+    // // ray的at方法现在必须要两个参数才能执行，所以需要加入临时变量temp
     var temp = new THREE.Vector3()
     let vtop = rayLine.at(hLen / rayLine.at(1, temp).distanceTo(p0), temp) // 几倍位置
     // 控制点坐标
@@ -34,8 +76,10 @@ function App() {
     var v2 = getLenVcetor(v3.clone(), vtop, aLen)
     // 绘制贝塞尔曲线
     var curve = new THREE.CubicBezierCurve3(v0, v1, v2, v3)
-    var geometry = new THREE.BufferGeometry()
-    geometry.vertices = curve.getPoints(100)
+    // var geometry = new THREE.BufferGeometry()
+    // geometry.vertices = curve.getPoints(100)
+    // const geometry = new THREE.BufferGeometry().setFromPoints(points);
+    const geometry = new THREE.BufferGeometry().setFromPoints(100)
     var line = new MeshLine()
     line.setGeometry(geometry)
     var material = new MeshLineMaterial({
@@ -48,17 +92,6 @@ function App() {
       curve: curve,
       lineMesh: new THREE.Mesh(line.geometry, material),
     }
-  }
-  // 计算v1,v2 的中点
-  function getVCenter(v1, v2) {
-    let v = v1.add(v2)
-    return v.divideScalar(2)
-  }
-
-  // 计算V1，V2向量固定长度的点
-  function getLenVcetor(v1, v2, len) {
-    let v1v2Len = v1.distanceTo(v2)
-    return v1.lerp(v2, len / v1v2Len)
   }
 
   const ENTIRE_SCENE = 0,
@@ -130,6 +163,7 @@ function App() {
   camera.position.set(0, 0, 3000)
 
   const group = new THREE.Group()
+  const groupLines = new THREE.Group()
   //const sphere = []
   //const vector = new THREE.Vector3();
 
@@ -229,7 +263,6 @@ function App() {
       sphere.scale.setScalar(3)
       let { x, y, z } = sphere.position
       points.push(sphere.position)
-      console.log('points', points)
       group.add(sphere)
       // 新建标签
       // var label = tag(objectNums[i]?.name) //把粮仓名称obj.name作为标签
@@ -239,11 +272,28 @@ function App() {
 
       if (Math.random() < 0.25) sphere.layers.enable(BLOOM_SCENE)
     }
-    // addLine(points[0], points[10])
-
+    console.log('points', points)
+    let line = addLine(points[0], points[2])
+    groupLines.add(line.lineMesh)
+    animateDots.push(line.curve.getPoints(150))
+    for (var i = 0; i < animateDots.length; i++) {
+      for (var j = 0; j < 50; j++) {
+        var aGeo = new THREE.SphereGeometry(0.2, 10, 10)
+        var aMaterial = new THREE.MeshBasicMaterial({
+          // color: lineColors[index % 3], //"rgb(27, 180, 176)",
+          color: 'rgb(27, 180, 176)', //"rgb(27, 180, 176)",
+          transparent: true,
+          opacity: 1 - j * 0.02,
+        })
+        var aMesh = new THREE.Mesh(aGeo, aMaterial)
+        aGroup.add(aMesh)
+      }
+    }
     scene.add(group)
-
     document.getElementById('App').appendChild(renderer.domElement) //body元素中插入canvas对象
+    scene.add(groupLines)
+    scene.add(aGroup)
+    animationLine()
 
     render()
     window.onresize = function () {
